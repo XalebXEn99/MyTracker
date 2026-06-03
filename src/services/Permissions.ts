@@ -17,7 +17,7 @@ export const getPermissionName = (permission: string) => {
       });
     case 'bluetooth':
       return Platform.select({
-        ios: PERMISSIONS.IOS.BLUETOOTH_PERIPHERAL,
+        ios: PERMISSIONS.IOS.BLUETOOTH,
         android: PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
       });
     case 'camera':

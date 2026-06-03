@@ -65,7 +65,7 @@ const MapScreen = () => {
       <MapboxGL.MapView style={styles.map} styleURL={mapboxConfig.styleURL}>
         <MapboxGL.Camera zoomLevel={12} followUserLocation={followUser} />
         <MapboxGL.UserLocation visible animated />
-        <MapboxGL.ShapeSource id="memories" shape={sources} onPress={(e) => onPressMemory(e.features?.[0])}>
+        <MapboxGL.ShapeSource id="memories" shape={sources.data as GeoJSON.FeatureCollection} onPress={(e) => onPressMemory(e.features?.[0])}>
           <MapboxGL.SymbolLayer
             id="memorySymbols"
             style={{

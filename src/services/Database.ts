@@ -1,4 +1,4 @@
-import SQLite, {ResultSet, Transaction} from 'react-native-sqlite-storage';
+import SQLite from 'react-native-sqlite-storage';
 import {DriveRecord, MemoryRecord, ProfileRecord, WalkRecord} from '../types';
 
 const DB_NAME = 'MyTracker.db';
@@ -8,14 +8,19 @@ const DB_SIZE = 200000;
 
 const db = SQLite.openDatabase({name: DB_NAME, location: 'default'}, () => {
   console.log('SQLite database opened');
-}, (error) => {
+}, (error: any) => {
   console.error('SQLite open error', error);
 });
 
 const executeSql = async (sql: string, params: any[] = []) => {
-  return new Promise<ResultSet>((resolve, reject) => {
-    db.transaction((tx: Transaction) => {
-      tx.executeSql(sql, params, (_tx, result) => resolve(result), (_tx, err) => reject(err));
+  return new Promise<any>((resolve, reject) => {
+    db.transaction((tx: any) => {
+      tx.executeSql(
+        sql,
+        params,
+        (_tx: any, result: any) => resolve(result),
+        (_tx: any, err: any) => reject(err),
+      );
     });
   });
 };

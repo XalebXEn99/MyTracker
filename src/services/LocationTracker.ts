@@ -31,7 +31,7 @@ export const startLocationTracking = async () => {
     async () => {
       console.log('Background fetch event received');
       await captureLocationPoint();
-      BackgroundFetch.finish(BackgroundFetch.FETCH_RESULT_NEW_DATA);
+      BackgroundFetch.finish('newData');
     },
     (error) => {
       console.warn('BackgroundFetch failed to start', error);
@@ -65,9 +65,6 @@ export const captureLocationPoint = async () => {
       {
         enableHighAccuracy: true,
         distanceFilter: 5,
-        interval: 5000,
-        fastestInterval: 2000,
-        showsBackgroundLocationIndicator: Platform.OS === 'ios',
       },
     );
   });

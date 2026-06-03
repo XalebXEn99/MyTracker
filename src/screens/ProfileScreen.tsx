@@ -22,8 +22,8 @@ const ProfileScreen = () => {
       }
       const walks = await fetchWalks();
       const drives = await fetchDrives();
-      const totalWalkKm = walks.reduce((sum, item) => sum + item.distance_meters / 1000, 0);
-      const totalDriveKm = drives.reduce((sum, item) => sum + item.distance_meters / 1000, 0);
+      const totalWalkKm = walks.reduce((sum, item) => sum + item.distanceMeters / 1000, 0);
+      const totalDriveKm = drives.reduce((sum, item) => sum + item.distanceMeters / 1000, 0);
       setSummary({
         steps: 0,
         walkKm: totalWalkKm,
