@@ -1,13 +1,12 @@
 * text=auto
 
-# iOS/Xcode files - always Unix line endings
-*.pbxproj text eol=lf
-*.pbxuser text eol=lf
-*.xcworkspace/** text eol=lf
-Podfile text eol=lf
-*.plist text eol=lf
-
-# Source code - always Unix line endings
+# Force Unix line endings for all iOS/source files
+ios/**/*.pbxproj text eol=lf
+ios/**/*.plist text eol=lf
+ios/**/*.h text eol=lf
+ios/**/*.m text eol=lf
+ios/**/*.swift text eol=lf
+ios/Podfile text eol=lf
 *.ts text eol=lf
 *.tsx text eol=lf
 *.js text eol=lf
@@ -20,3 +19,4 @@ Podfile text eol=lf
 *.png binary
 *.jpg binary
 *.jpeg binary
+
