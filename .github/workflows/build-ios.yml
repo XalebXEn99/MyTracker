@@ -13,8 +13,20 @@ jobs:
     env:
       MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
     steps:
+      - name: Configure Git for line endings
+        run: |
+          git config --global core.safecrlf false
+          git config --global core.autocrlf input
+
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Normalize line endings
+        run: |
+          cd ios
+          find . -type f \( -name "*.pbxproj" -o -name "*.plist" -o -name "Podfile" -o -name "*.h" -o -name "*.m" \) -exec sed -i 's/\r$//' {} +
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
@@ -67,3 +79,4 @@ jobs:
         with:
           name: MyTracker-unsigned.ipa
           path: ios/build/ipa
+
