@@ -13,20 +13,10 @@ jobs:
     env:
       MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
     steps:
-      - name: Configure Git for line endings
-        run: |
-          git config --global core.safecrlf false
-          git config --global core.autocrlf input
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           lfs: false
-
-      - name: Normalize line endings
-        run: |
-          cd ios
-          find . -type f \( -name "*.pbxproj" -o -name "*.plist" -o -name "Podfile" -o -name "*.h" -o -name "*.m" \) -exec sed -i 's/\r$//' {} +
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
@@ -40,41 +30,33 @@ jobs:
           bundler-cache: false
 
       - name: Install CocoaPods
-        run: |
-          sudo gem install -n /usr/local/bin cocoapods
+        run: sudo gem install -n /usr/local/bin cocoapods
 
       - name: Install JavaScript dependencies
-        run: |
-          yarn install --ignore-engines --non-interactive
+        run: yarn install --ignore-engines --non-interactive
 
-      - name: Clean iOS build artifacts
+      - name: Clean and prepare iOS
         run: |
           cd ios
-          rm -rf Pods
-          rm -rf Podfile.lock
-          rm -rf .xcode.env
-          rm -rf build
+          rm -rf Pods Podfile.lock .xcode.env build
 
-      - name: Install CocoaPods dependencies
-        run: |
-          cd ios
-          pod install --repo-update
+      - name: Install CocoaPods
+        run: cd ios && pod install --repo-update
 
       - name: Build JS bundle
-        run: |
-          yarn react-native bundle --entry-file index.js --platform ios --dev false --bundle-output ios/main.jsbundle --assets-dest ios
+        run: yarn react-native bundle --entry-file index.js --platform ios --dev false --bundle-output ios/main.jsbundle --assets-dest ios
 
-      - name: Archive MyTracker
+      - name: Build archive
         run: |
           cd ios
           xcodebuild -workspace MyTracker.xcworkspace -scheme MyTracker -configuration Release -archivePath $PWD/build/MyTracker.xcarchive archive CODE_SIGNING_ALLOWED=NO CODE_SIGN_STYLE=Manual
 
-      - name: Export unsigned IPA
+      - name: Export IPA
         run: |
           cd ios
           xcodebuild -exportArchive -archivePath $PWD/build/MyTracker.xcarchive -exportOptionsPlist exportOptions.plist -exportPath $PWD/build/ipa
 
-      - name: Upload IPA artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: MyTracker-unsigned.ipa
