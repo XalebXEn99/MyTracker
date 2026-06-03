@@ -1,8 +1,8 @@
 * text=auto
 
 # Force Unix line endings for all iOS/source files
-ios/**/*.pbxproj text eol=lf
-ios/**/*.plist text eol=lf
+*.pbxproj text eol=lf
+*.plist text eol=lf
 ios/**/*.h text eol=lf
 ios/**/*.m text eol=lf
 ios/**/*.swift text eol=lf
@@ -19,4 +19,3 @@ ios/Podfile text eol=lf
 *.png binary
 *.jpg binary
 *.jpeg binary
-

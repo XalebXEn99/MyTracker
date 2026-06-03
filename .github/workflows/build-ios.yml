@@ -15,33 +15,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          lfs: false
 
-      - name: Fix line endings on iOS files
+      - name: Configure git to preserve LF
         run: |
-          # Aggressive line ending normalization before pod install
-          python3 << 'PYTHON'
-          import glob
-          import os
-          
-          # Find ALL files in ios directory
-          for root, dirs, files in os.walk('ios'):
-              for file in files:
-                  fpath = os.path.join(root, file)
-                  # Include: pbxproj, plist, h, m, swift, Podfile, schemes
-                  if any(fpath.endswith(ext) for ext in ['.pbxproj', '.plist', '.h', '.m', '.swift', 'Podfile', '.xcscheme']):
-                      try:
-                          with open(fpath, 'rb') as f:
-                              content = f.read()
-                          # Remove ALL CR characters (both CRLF and old Mac CR)
-                          fixed = content.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
-                          if fixed != content:
-                              with open(fpath, 'wb') as f:
-                                  f.write(fixed)
-                              print(f"Fixed: {fpath}")
-                      except Exception as e:
-                          pass
-          PYTHON
-          echo "Line ending normalization complete"
+          git config --global core.autocrlf false
+          git config --global core.safecrlf false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -68,18 +48,7 @@ jobs:
       - name: Install CocoaPods dependencies
         run: |
           cd ios
-          echo "=== Podfile content ==="
-          cat Podfile
-          echo ""
-          echo "=== Node modules check ==="
-          ls -la ../node_modules/@react-native-mapbox-gl/maps 2>&1 | head -20 || echo "Mapbox not found yet"
-          echo ""
-          echo "=== Running pod install ==="
-          pod install --repo-update 2>&1 || {
-            echo "Pod install failed. Attempting diagnostics..."
-            pod repo update
-            pod install
-          }
+          pod install --repo-update
 
       - name: Create JS bundle
         run: |
@@ -93,33 +62,14 @@ jobs:
       - name: Build archive
         run: |
           cd ios
-          echo "=== Xcode version ==="
-          xcodebuild -version
-          echo ""
-          echo "=== Checking workspace ==="
-          ls -la MyTracker.xcworkspace/ 2>&1 | head -10 || echo "Workspace not ready"
-          echo ""
-          echo "=== Starting archive ==="
           xcodebuild \
             -workspace MyTracker.xcworkspace \
             -scheme MyTracker \
             -configuration Release \
-            -derivedDataPath build/DerivedData \
             -archivePath build/MyTracker.xcarchive \
             clean archive \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_STYLE=Manual 2>&1 | tail -100 || {
-            echo "Workspace build failed, trying project directly..."
-            xcodebuild \
-              -project MyTracker.xcodeproj \
-              -scheme MyTracker \
-              -configuration Release \
-              -derivedDataPath build/DerivedData \
-              -archivePath build/MyTracker.xcarchive \
-              clean archive \
-              CODE_SIGNING_ALLOWED=NO \
-              CODE_SIGN_STYLE=Manual 2>&1 | tail -100
-          }
+            CODE_SIGN_STYLE=Manual
 
       - name: Export unsigned IPA
         run: |
