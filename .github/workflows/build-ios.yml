@@ -45,6 +45,9 @@ jobs:
           cd ios
           rm -rf Pods Podfile.lock .xcode.env build
 
+      - name: Validate plists
+        run: bash scripts/ci-validate-plists.sh
+
       - name: Install CocoaPods dependencies
         run: |
           cd ios
