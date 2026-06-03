@@ -18,7 +18,34 @@ jobs:
 
       - name: Fix line endings on iOS files
         run: |
-          find ios -type f \( -name "*.pbxproj" -o -name "*.plist" -o -name "*.h" -o -name "*.m" -o -name "Podfile" \) -exec sed -i '' 's/\r$//' {} \;
+          # Use Python which is reliable on macOS
+          python3 << 'PYTHON'
+          import glob
+          import os
+          
+          files_to_fix = glob.glob('ios/**/*', recursive=True)
+          patterns = ('.pbxproj', '.plist', '.h', '.m', 'Podfile')
+          
+          for fpath in files_to_fix:
+              if not os.path.isfile(fpath):
+                  continue
+              if not any(fpath.endswith(p) for p in patterns):
+                  continue
+              
+              try:
+                  with open(fpath, 'rb') as f:
+                      content = f.read()
+                  
+                  # Convert all CR/CRLF to LF
+                  fixed = content.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
+                  
+                  if fixed != content:
+                      with open(fpath, 'wb') as f:
+                          f.write(fixed)
+                      print(f"Fixed EOL: {fpath}")
+              except Exception as e:
+                  print(f"Skip {fpath}: {e}")
+          PYTHON
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -45,7 +72,18 @@ jobs:
       - name: Install CocoaPods dependencies
         run: |
           cd ios
-          pod install --repo-update
+          echo "=== Podfile content ==="
+          cat Podfile
+          echo ""
+          echo "=== Node modules check ==="
+          ls -la ../node_modules/@react-native-mapbox-gl/maps 2>&1 | head -20 || echo "Mapbox not found yet"
+          echo ""
+          echo "=== Running pod install ==="
+          pod install --repo-update 2>&1 || {
+            echo "Pod install failed. Attempting diagnostics..."
+            pod repo update
+            pod install
+          }
 
       - name: Create JS bundle
         run: |
@@ -59,6 +97,13 @@ jobs:
       - name: Build archive
         run: |
           cd ios
+          echo "=== Xcode version ==="
+          xcodebuild -version
+          echo ""
+          echo "=== Checking workspace ==="
+          ls -la MyTracker.xcworkspace/ 2>&1 | head -10
+          echo ""
+          echo "=== Starting archive ==="
           xcodebuild \
             -workspace MyTracker.xcworkspace \
             -scheme MyTracker \
@@ -67,7 +112,7 @@ jobs:
             -archivePath build/MyTracker.xcarchive \
             clean archive \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_STYLE=Manual
+            CODE_SIGN_STYLE=Manual 2>&1 | tail -100
 
       - name: Export unsigned IPA
         run: |
