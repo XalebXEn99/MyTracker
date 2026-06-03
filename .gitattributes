@@ -1,12 +1,20 @@
 * text=auto
 
-# Force Unix line endings for all iOS/source files
+# === CocoaPods Plist Parsing Fix ===
+# The following entries enforce LF-only line endings for critical iOS build files.
+# CocoaPods plist parser fails with "Found additional characters after parsing the root plist object"
+# if these files contain CRLF line endings (Windows). We normalize to LF on all platforms.
+# See scripts/fix_plists.sh and ios/README-fix-plists.md for diagnostics.
+
+# Force Unix line endings for iOS build configuration
 *.pbxproj text eol=lf
 *.plist text eol=lf
 ios/**/*.h text eol=lf
 ios/**/*.m text eol=lf
 ios/**/*.swift text eol=lf
 ios/Podfile text eol=lf
+
+# Force Unix line endings for source code and configuration
 *.ts text eol=lf
 *.tsx text eol=lf
 *.js text eol=lf
