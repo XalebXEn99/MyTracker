@@ -2,93 +2,87 @@ name: Build iOS unsigned IPA
 
 on:
   push:
-    branches: [ main, master ]
-  workflow_dispatch: {}
+    branches:
+      - main
+      - master
+  workflow_dispatch:
 
 jobs:
   build-ios:
     runs-on: macos-latest
-    env:
-      MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+    environment: production
+
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Fix line endings on iOS files
+        run: |
+          find ios -type f \( -name "*.pbxproj" -o -name "*.plist" -o -name "*.h" -o -name "*.m" -o -name "Podfile" \) -exec sed -i '' 's/\r$//' {} \;
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          lfs: false
+          node-version: 20
 
-      - name: Ensure consistent Git EOL handling
-        run: |
-          git config --local core.autocrlf input || true
-
-      - name: Normalize iOS line endings (defensive)
-        run: |
-          python3 - <<'PY'
-          import glob, os, sys
-          files = glob.glob('ios/**/*', recursive=True)
-          targets = [f for f in files if f.endswith(('.pbxproj','.plist','.h','.m','Podfile'))]
-          for file in targets:
-              try:
-                  b = open(file,'rb').read()
-                  if b'\r\n' in b or b'\r' in b:
-                      open(file,'wb').write(b.replace(b'\r\n',b'\n').replace(b'\r',b'\n'))
-                      print('normalized', file)
-              except Exception as e:
-                  print('skip', file, e)
-          PY
-
-      - name: Dump first lines of project file (diagnostic)
-        run: |
-          echo '--- project.pbxproj head ---'
-          head -n 15 ios/MyTracker.xcodeproj/project.pbxproj || true
-          echo '--- end ---'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: '20'
-
-      - name: Setup Ruby and CocoaPods
+      - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.3'
+          ruby-version: 3.3
           bundler-cache: false
 
       - name: Install CocoaPods
-        run: sudo gem install -n /usr/local/bin cocoapods -v "~> 1.16"
+        run: sudo gem install cocoapods -v "~> 1.16"
 
       - name: Install JavaScript dependencies
-        run: yarn install --ignore-engines --non-interactive
+        run: yarn install --ignore-engines
 
-      - name: Clean and prepare iOS
+      - name: Clean iOS build artifacts
         run: |
           cd ios
           rm -rf Pods Podfile.lock .xcode.env build
 
-      - name: Pod install (verbose)
+      - name: Install CocoaPods dependencies
         run: |
-          set -o pipefail
           cd ios
-          pod install --repo-update --verbose | sed -n '1,200p'
+          pod install --repo-update
 
-      - name: Build JS bundle
+      - name: Create JS bundle
         run: |
-          yarn react-native bundle --entry-file index.js --platform ios --dev false --bundle-output ios/main.jsbundle --assets-dest ios || true
+          yarn react-native bundle \
+            --entry-file index.js \
+            --platform ios \
+            --dev false \
+            --bundle-output ios/main.jsbundle \
+            --assets-dest ios
 
-      - name: xcodebuild: clean and archive
+      - name: Build archive
         run: |
-          set -o pipefail
           cd ios
-          xcodebuild -workspace MyTracker.xcworkspace -scheme MyTracker -configuration Release -archivePath $PWD/build/MyTracker.xcarchive clean archive CODE_SIGNING_ALLOWED=NO CODE_SIGN_STYLE=Manual | sed -n '1,200p'
+          xcodebuild \
+            -workspace MyTracker.xcworkspace \
+            -scheme MyTracker \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            -archivePath build/MyTracker.xcarchive \
+            clean archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_STYLE=Manual
 
-      - name: Export IPA
+      - name: Export unsigned IPA
         run: |
           cd ios
           mkdir -p build/ipa
-          xcodebuild -exportArchive -archivePath $PWD/build/MyTracker.xcarchive -exportOptionsPlist exportOptions.plist -exportPath $PWD/build/ipa | sed -n '1,200p'
+          xcodebuild \
+            -exportArchive \
+            -archivePath build/MyTracker.xcarchive \
+            -exportOptionsPlist exportOptions.plist \
+            -exportPath build/ipa
 
-      - name: Upload artifact
+      - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: MyTracker-unsigned.ipa
           path: ios/build/ipa
+          retention-days: 30
 
