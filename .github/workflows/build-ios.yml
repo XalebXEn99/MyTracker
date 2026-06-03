@@ -51,7 +51,13 @@ jobs:
       - name: Install CocoaPods dependencies
         run: |
           cd ios
-          pod install --repo-update
+          pod install --repo-update -v 2>&1 | tee pod_install.log || {
+            echo "=== POD INSTALL FAILED ==="
+            tail -100 pod_install.log
+            echo "=== Searching for plist-related errors ==="
+            grep -i "plist\|nanaimo" pod_install.log || echo "No plist errors found in log"
+            exit 1
+          }
 
       - name: Create JS bundle
         run: |
