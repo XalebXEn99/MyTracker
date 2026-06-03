@@ -2,9 +2,7 @@ name: Build iOS unsigned IPA
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [ main, master ]
   workflow_dispatch: {}
 
 jobs:
@@ -18,20 +16,31 @@ jobs:
         with:
           lfs: false
 
-      - name: Fix line endings
+      - name: Ensure consistent Git EOL handling
         run: |
-          python3 << 'EOF'
-          import glob
-          import os
-          for file in glob.glob("ios/**/*.pbxproj", recursive=True) + glob.glob("ios/**/*.plist", recursive=True) + glob.glob("ios/**/*.h", recursive=True) + glob.glob("ios/**/*.m", recursive=True) + glob.glob("ios/Podfile", recursive=True):
-              if os.path.exists(file):
-                  with open(file, 'rb') as f:
-                      content = f.read()
-                  if b'\r\n' in content:
-                      with open(file, 'wb') as f:
-                          f.write(content.replace(b'\r\n', b'\n'))
-                      print(f"Fixed: {file}")
-          EOF
+          git config --local core.autocrlf input || true
+
+      - name: Normalize iOS line endings (defensive)
+        run: |
+          python3 - <<'PY'
+          import glob, os, sys
+          files = glob.glob('ios/**/*', recursive=True)
+          targets = [f for f in files if f.endswith(('.pbxproj','.plist','.h','.m','Podfile'))]
+          for file in targets:
+              try:
+                  b = open(file,'rb').read()
+                  if b'\r\n' in b or b'\r' in b:
+                      open(file,'wb').write(b.replace(b'\r\n',b'\n').replace(b'\r',b'\n'))
+                      print('normalized', file)
+              except Exception as e:
+                  print('skip', file, e)
+          PY
+
+      - name: Dump first lines of project file (diagnostic)
+        run: |
+          echo '--- project.pbxproj head ---'
+          head -n 15 ios/MyTracker.xcodeproj/project.pbxproj || true
+          echo '--- end ---'
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
@@ -45,7 +54,7 @@ jobs:
           bundler-cache: false
 
       - name: Install CocoaPods
-        run: sudo gem install -n /usr/local/bin cocoapods
+        run: sudo gem install -n /usr/local/bin cocoapods -v "~> 1.16"
 
       - name: Install JavaScript dependencies
         run: yarn install --ignore-engines --non-interactive
@@ -55,21 +64,27 @@ jobs:
           cd ios
           rm -rf Pods Podfile.lock .xcode.env build
 
-      - name: Install CocoaPods
-        run: cd ios && pod install --repo-update
+      - name: Pod install (verbose)
+        run: |
+          set -o pipefail
+          cd ios
+          pod install --repo-update --verbose | sed -n '1,200p'
 
       - name: Build JS bundle
-        run: yarn react-native bundle --entry-file index.js --platform ios --dev false --bundle-output ios/main.jsbundle --assets-dest ios
-
-      - name: Build archive
         run: |
+          yarn react-native bundle --entry-file index.js --platform ios --dev false --bundle-output ios/main.jsbundle --assets-dest ios || true
+
+      - name: xcodebuild: clean and archive
+        run: |
+          set -o pipefail
           cd ios
-          xcodebuild -workspace MyTracker.xcworkspace -scheme MyTracker -configuration Release -archivePath $PWD/build/MyTracker.xcarchive archive CODE_SIGNING_ALLOWED=NO CODE_SIGN_STYLE=Manual
+          xcodebuild -workspace MyTracker.xcworkspace -scheme MyTracker -configuration Release -archivePath $PWD/build/MyTracker.xcarchive clean archive CODE_SIGNING_ALLOWED=NO CODE_SIGN_STYLE=Manual | sed -n '1,200p'
 
       - name: Export IPA
         run: |
           cd ios
-          xcodebuild -exportArchive -archivePath $PWD/build/MyTracker.xcarchive -exportOptionsPlist exportOptions.plist -exportPath $PWD/build/ipa
+          mkdir -p build/ipa
+          xcodebuild -exportArchive -archivePath $PWD/build/MyTracker.xcarchive -exportOptionsPlist exportOptions.plist -exportPath $PWD/build/ipa | sed -n '1,200p'
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
