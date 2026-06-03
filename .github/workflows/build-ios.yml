@@ -40,10 +40,13 @@ jobs:
       - name: Install JavaScript dependencies
         run: yarn install --ignore-engines
 
-      - name: Clean iOS build artifacts
-        run: |
-          cd ios
-          rm -rf Pods Podfile.lock .xcode.env build
+      - name: Cache Pods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
 
       - name: Validate plists
         run: bash scripts/ci-validate-plists.sh
@@ -51,13 +54,7 @@ jobs:
       - name: Install CocoaPods dependencies
         run: |
           cd ios
-          pod install --repo-update -v 2>&1 | tee pod_install.log || {
-            echo "=== POD INSTALL FAILED ==="
-            tail -100 pod_install.log
-            echo "=== Searching for plist-related errors ==="
-            grep -i "plist\|nanaimo" pod_install.log || echo "No plist errors found in log"
-            exit 1
-          }
+          pod install --repo-update
 
       - name: Create JS bundle
         run: |
@@ -78,7 +75,7 @@ jobs:
             -archivePath build/MyTracker.xcarchive \
             clean archive \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_STYLE=Manual
+            CODE_SIGN_STYLE=Manual 2>&1 | head -50
 
       - name: Export unsigned IPA
         run: |
@@ -88,7 +85,7 @@ jobs:
             -exportArchive \
             -archivePath build/MyTracker.xcarchive \
             -exportOptionsPlist exportOptions.plist \
-            -exportPath build/ipa
+            -exportPath build/ipa 2>&1 | head -50
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
