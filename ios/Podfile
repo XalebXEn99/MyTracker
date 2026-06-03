@@ -7,18 +7,15 @@ workspace 'MyTracker.xcworkspace'
 
 use_frameworks! :linkage => :static
 
-def use_native_modules_with_mapbox!
-  use_native_modules!
-  pod 'react-native-mapbox-gl', :path => '../node_modules/@react-native-mapbox-gl/maps'
-end
-
 target 'MyTracker' do
-  config = use_native_modules_with_mapbox!
+  config = use_native_modules!
   use_react_native!(
     :path => config[:reactNativePath],
     :fabric_enabled => false,
     :hermes_enabled => false,
   )
+  
+  pod 'react-native-mapbox-gl', :path => '../node_modules/@react-native-mapbox-gl/maps'
 
   target 'MyTrackerTests' do
     inherit! :complete
