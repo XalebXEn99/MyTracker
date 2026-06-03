@@ -21,16 +21,32 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Ruby and CocoaPods
-        run: |
-          brew install ruby
-          gem install cocoapods
+      - name: Setup Ruby and CocoaPods
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: false
 
-      - name: Install dependencies
+      - name: Install CocoaPods
         run: |
-          yarn install
+          sudo gem install -n /usr/local/bin cocoapods
+
+      - name: Install JavaScript dependencies
+        run: |
+          yarn install --ignore-engines --non-interactive
+
+      - name: Clean iOS build artifacts
+        run: |
           cd ios
-          pod install
+          rm -rf Pods
+          rm -rf Podfile.lock
+          rm -rf .xcode.env
+          rm -rf build
+
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios
+          pod install --repo-update
 
       - name: Build JS bundle
         run: |

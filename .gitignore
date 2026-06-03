@@ -1,10 +1,15 @@
 node_modules/
 ios/Pods/
+ios/Podfile.lock
 ios/build/
+ios/.xcode.env
 android/build/
 android/app/build/
 *.log
-*.xcworkspace
 .DS_Store
 .env
 build/
+*.xcarchive
+dist/
+.gradle/
+
