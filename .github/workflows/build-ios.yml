@@ -18,6 +18,21 @@ jobs:
         with:
           lfs: false
 
+      - name: Fix line endings
+        run: |
+          python3 << 'EOF'
+          import glob
+          import os
+          for file in glob.glob("ios/**/*.pbxproj", recursive=True) + glob.glob("ios/**/*.plist", recursive=True) + glob.glob("ios/**/*.h", recursive=True) + glob.glob("ios/**/*.m", recursive=True) + glob.glob("ios/Podfile", recursive=True):
+              if os.path.exists(file):
+                  with open(file, 'rb') as f:
+                      content = f.read()
+                  if b'\r\n' in content:
+                      with open(file, 'wb') as f:
+                          f.write(content.replace(b'\r\n', b'\n'))
+                      print(f"Fixed: {file}")
+          EOF
+
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
