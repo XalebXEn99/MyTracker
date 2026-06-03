@@ -21,8 +21,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Setup EAS CLI
-        uses: expo/setup-expo-github-action@v2
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
 
       - name: Install dependencies
         run: npm install
