@@ -1,0 +1,13 @@
+**/.git
+**/.gitignore
+**/.env
+**/.env.local
+**/node_modules
+**/npm-debug.*
+**/*.jks
+**/*.p8
+**/*.p12
+**/*.key
+**/*.mobileprovision
+**/*.orig.*
+**/*.jsbundle

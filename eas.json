@@ -1,0 +1,26 @@
+{
+  "cli": {
+    "version": ">= 5.0.0"
+  },
+  "build": {
+    "production": {
+      "ios": {
+        "buildType": "archive",
+        "provisioning": "adhoc",
+        "distribution": "internal",
+        "enterpriseProvisioning": "adhoc"
+      }
+    },
+    "preview": {
+      "ios": {
+        "buildType": "archive"
+      }
+    },
+    "development": {
+      "ios": {
+        "buildType": "simulator"
+      }
+    }
+  },
+  "submit": {}
+}

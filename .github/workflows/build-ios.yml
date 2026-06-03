@@ -1,4 +1,4 @@
-name: Build iOS unsigned IPA
+name: Build iOS unsigned IPA with EAS
 
 on:
   push:
@@ -9,88 +9,47 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     environment: production
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          lfs: false
-
-      - name: Configure git to preserve LF
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.safecrlf false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: 3.3
-          bundler-cache: false
+      - name: Setup EAS CLI
+        uses: expo/setup-expo-github-action@v2
 
-      - name: Install CocoaPods
-        run: sudo gem install cocoapods -v "~> 1.16"
+      - name: Install dependencies
+        run: npm install
 
-      - name: Install JavaScript dependencies
-        run: yarn install --ignore-engines
-
-      - name: Cache Pods
-        uses: actions/cache@v4
-        with:
-          path: ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pods-
-
-      - name: Validate plists
-        run: bash scripts/ci-validate-plists.sh
-
-      - name: Install CocoaPods dependencies
+      - name: Build iOS app with EAS
         run: |
-          cd ios
-          pod install --repo-update
-
-      - name: Create JS bundle
-        run: |
-          yarn react-native bundle \
-            --entry-file index.js \
+          eas build \
             --platform ios \
-            --dev false \
-            --bundle-output ios/main.jsbundle \
-            --assets-dest ios
+            --profile production \
+            --non-interactive \
+            --wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Build archive
+      - name: Download IPA artifact
         run: |
-          cd ios
-          xcodebuild \
-            -workspace MyTracker.xcworkspace \
-            -scheme MyTracker \
-            -configuration Release \
-            -archivePath build/MyTracker.xcarchive \
-            clean archive \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_STYLE=Manual 2>&1 | head -50
-
-      - name: Export unsigned IPA
-        run: |
-          cd ios
-          mkdir -p build/ipa
-          xcodebuild \
-            -exportArchive \
-            -archivePath build/MyTracker.xcarchive \
-            -exportOptionsPlist exportOptions.plist \
-            -exportPath build/ipa 2>&1 | head -50
+          eas build:download \
+            --latest \
+            --non-interactive \
+            --output ./MyTracker.ipa
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: MyTracker-unsigned.ipa
-          path: ios/build/ipa
+          path: ./MyTracker.ipa
           retention-days: 30
 
