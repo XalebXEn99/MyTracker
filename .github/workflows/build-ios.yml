@@ -1,0 +1,53 @@
+name: Build iOS unsigned IPA
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch: {}
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    env:
+      MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+
+      - name: Install Ruby and CocoaPods
+        run: |
+          brew install ruby
+          gem install cocoapods
+
+      - name: Install dependencies
+        run: |
+          yarn install
+          cd ios
+          pod install
+
+      - name: Build JS bundle
+        run: |
+          yarn react-native bundle --entry-file index.js --platform ios --dev false --bundle-output ios/main.jsbundle --assets-dest ios
+
+      - name: Archive MyTracker
+        run: |
+          cd ios
+          xcodebuild -workspace MyTracker.xcworkspace -scheme MyTracker -configuration Release -archivePath $PWD/build/MyTracker.xcarchive archive CODE_SIGNING_ALLOWED=NO CODE_SIGN_STYLE=Manual
+
+      - name: Export unsigned IPA
+        run: |
+          cd ios
+          xcodebuild -exportArchive -archivePath $PWD/build/MyTracker.xcarchive -exportOptionsPlist exportOptions.plist -exportPath $PWD/build/ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyTracker-unsigned.ipa
+          path: ios/build/ipa

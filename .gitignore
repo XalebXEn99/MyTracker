@@ -1,0 +1,10 @@
+node_modules/
+ios/Pods/
+ios/build/
+android/build/
+android/app/build/
+*.log
+*.xcworkspace
+.DS_Store
+.env
+build/
